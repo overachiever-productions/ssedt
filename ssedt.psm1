@@ -49,7 +49,7 @@ function Set-EphemeralDisks {
 	);
 	
 	begin {
-		$transcriptFile = "C:\Windows\Temp\ssedt_transcript_$(Get-Date -Format "yyyy-mm-dd_hhMMss").txt";
+		$transcriptFile = "C:\Windows\Temp\ssedt_transcript_$(Get-Date -Format "yyyy-MM-dd_hhmmss").txt";
 		Start-Transcript -Path $transcriptFile;
 		Write-Host "Transcript Started. Location: [$transcriptFile]";
 	};
