@@ -15,7 +15,26 @@ function Enable-AutoStartForEphemeralDisks {
 	};
 	
 	process {
+		param (
+			[Parameter(Mandatory)]
+			[string]$ScriptPath,
+			[string]$TaskName = "Provision Ephemeral Disks at Startup"
+		);
 		
+		$task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue;
+		if ($null -ne $task) {
+			Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false | Out-Null;
+		}
+		
+		$trigger = New-ScheduledTaskTrigger -AtStartup -RandomDelay 00:00:04;
+		$settings = New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew;
+		
+		$taskArguments = "-ExecutionPolicy BYPASS -NoProfile -File `"$($ScriptPath)`" ";
+		$executatablePath = Join-Path -Path $PSHOME -ChildPath "powershell.exe";  		# MKC: could do pwsh.exe IF PWSH 7/etc. installed. 
+		$action = New-ScheduledTaskAction -Execute $executatablePath -Argument $taskArguments;
+		
+		$description = "Script / Task to Auto-Provision Ephemeral disks, directories, and perms.";
+		Register-ScheduledTask -TaskName $TaskName -Trigger $trigger -Action $action -Settings $settings -User "SYSTEM" -RunLevel Highest -Description $description | Out-Null;
 		
 		# get user inputs... 
 		
