@@ -12,10 +12,13 @@
 #	RequiredModules = @()
 #	RequiredAssemblies = @()
 #	ScriptsToProcess = @()
-#	TypesToProcess = @()
+	TypesToProcess = @()
 	FormatsToProcess = @()
 #	NestedModules = @()
-	FunctionsToExport = '*'
+	FunctionsToExport = @(
+		'Enable-AutoStartForEphemeralDisks',
+		'Set-EphemeralDisks'
+	)
 #	CmdletsToExport = '*' 
 #	VariablesToExport = '*'
 	AliasesToExport = '*'
