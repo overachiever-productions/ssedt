@@ -1,6 +1,6 @@
 ﻿@{
 	RootModule = 'ssedt.psm1'
-	ModuleVersion = '0.2.0.0'
+	ModuleVersion = '0.2.1.0'
 	GUID = '2f23447d-6e69-4e1c-9dd4-c87f1672e341'
 	Author = 'Michael K. Campbell'
 	CompanyName = 'OverAchiever Productions, LLC.'
@@ -15,10 +15,7 @@
 	TypesToProcess = @()
 	FormatsToProcess = @()
 #	NestedModules = @()
-	FunctionsToExport = @(
-		'Enable-AutoStartForEphemeralDisks',
-		'Set-EphemeralDisks'
-	)
+	FunctionsToExport = '*'
 #	CmdletsToExport = '*' 
 #	VariablesToExport = '*'
 	AliasesToExport = '*'

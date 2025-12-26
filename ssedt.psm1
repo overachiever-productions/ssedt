@@ -61,7 +61,7 @@ function Set-EphemeralDisks {
 	param (
 		[Alias('Volumes')]
 		[Parameter(Mandatory)]
-		[string[]]$TempDbVolumes,
+		#[string[]]$TempDbVolumes,
 		[Alias('Instance', 'InstanceName')]
 		[string]$SqlInstanceName = "MSSQLSERVER",
 		[string]$TempDbDirectoryName = "sqltemp"
@@ -74,10 +74,20 @@ function Set-EphemeralDisks {
 	};
 	
 	process {
-		Write-Host "Parameters: ";
-		Write-Host "`tVolumes: [$TempDbVolumes]";
-		Write-Host "`tInstance: [$SqlInstanceName]";
-		Write-Host "`tTempDbDir: [$TempDbDirectoryName]";
+		
+#		Write-Host "Parameters: ";
+#		Write-Host "`tVolumes: [$TempDbVolumes]";
+#		Write-Host "`tInstance: [$SqlInstanceName]";
+#		Write-Host "`tTempDbDir: [$TempDbDirectoryName]";
+		
+		## TODO: pull the __invocation_template contents ... and test that I can spit them out... 
+		# 		if so... then i'll know that the MODULE can get 'includes' from itself.		
+		
+		[string]$templateContent = Get-InvocationTemplateContent;
+		
+		Write-Host "|$templateContent|";
+		
+		
 	};
 	
 	end {
@@ -88,3 +98,16 @@ function Set-EphemeralDisks {
 # ==================================================================================================================================
 # INTERNAL:
 # ==================================================================================================================================	
+filter Get-InvocationTemplateContent {
+	[string]$template = @"
+Set-StrictMode -Version 3.0;
+#Requires -RunAsAdministrator; 
+Import-Module -Name ssedt;
+
+Set-EphemeralDisks -Volumes @();
+"@
+	
+	return $template;
+}
+
+Export-ModuleMember -Function Enable-AutoStartForEphemeralDisks, Set-EphemeralDisks;
