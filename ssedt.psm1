@@ -8,6 +8,9 @@ function Enable-AutoStartForEphemeralDisks {
 	);
 	
 	begin {
+		
+		# TODO: https://overachieverllc.atlassian.net/browse/SSEDT-13
+		
 		[string]$invocationTemplate = Get-InvocationTemplateContent;
 	};
 	
@@ -80,6 +83,8 @@ function Enable-AutoStartForEphemeralDisks {
 			$disks = $serializedString;
 		}
 		
+		
+# !!!! TODO: https://overachieverllc.atlassian.net/browse/SSEDT-11		
 		Write-StepHeader -StepText "STEP 3 of 4: Specify TempDb Directory Name (per volume):";
 		
 		$dirName = Request-ValueWithDefault -Message "Specify a value for tempdb dir: " -Default "SqlTempDbData";
@@ -119,6 +124,11 @@ function Set-EphemeralDisks {
 	);
 	
 	begin {
+		
+		# TODO
+		# !!!!		https://overachieverllc.atlassian.net/browse/SSEDT-10
+		
+		
 		$transcriptFile = "C:\Windows\Temp\ssedt_transcript_$(Get-Date -Format "yyyy-MM-dd_hhmmss").txt";
 		Start-Transcript -Path $transcriptFile;
 		Write-Host "Transcript Started. Location: [$transcriptFile]";
