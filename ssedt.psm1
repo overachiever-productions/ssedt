@@ -151,7 +151,11 @@ function Register-EphemeralDisksAutoStartJob {
 		
 		[string]$serializedVolumes = $Volumes -join ",";
 		
-		[string]$command = Get-InvocationTemplateContent;
+		[string]$command = @"
+Import-Module -Name ssedt;
+Set-EphemeralDisksForSqlServer -Volumes @() -Instance "MSSQLSERVER" -DirectoryName "sqltemp";
+"@;
+		
 		$command = $command.Replace("MSSQLSERVER", $Instance);
 		$command = $command.Replace("@()", "@($serializedVolumes)");
 		$command = $command.Replace("sqltemp", "$DirectoryName");
@@ -181,7 +185,6 @@ function Set-EphemeralDisksForSqlServer {
 		# TODO
 		# !!!!		https://overachieverllc.atlassian.net/browse/SSEDT-10
 		
-		
 		$transcriptFile = "C:\Windows\Temp\ssedt_transcript_$(Get-Date -Format "yyyy-MM-dd_hhmmss").txt";
 		Start-Transcript -Path $transcriptFile;
 		Write-Host "Transcript Started. Location: [$transcriptFile]";
@@ -207,16 +210,16 @@ function Set-EphemeralDisksForSqlServer {
 	};
 }
 
+function UnRegister-EphemeralDisksAutoStartJob {
+	throw "Not Yet Implemented.";
+	# https://overachieverllc.atlassian.net/browse/SSEDT-15
+	
+	# TODO: hmmm. This'll need an instance name (eventually).
+}
+
 # ==================================================================================================================================
 # INTERNAL:
 # ==================================================================================================================================	
-filter Get-InvocationTemplateContent {
-	return @"
-Import-Module -Name ssedt;
-Set-EphemeralDisks -Volumes @() -Instance "MSSQLSERVER" -DirectoryName "sqltemp";
-"@
-}
-
 filter New-JobForEphemeralDisksAutoStart {
 	param (
 		[string]$TaskName = "Provision Ephemeral Disks at Startup",
@@ -224,15 +227,12 @@ filter New-JobForEphemeralDisksAutoStart {
 		[string]$Command
 	);
 	
-	
 	Write-Verbose "COMMAND: [$Command]";
 	
 	$bytes = [System.Text.Encoding]::Unicode.GetBytes($Command);
-	[string]$base64 = [Convert]::ToBase64String($bytes);
+	[string]$EncodedCommand = [Convert]::ToBase64String($bytes);
 	
-	Write-Verbose "COMMAND - BASE64: [$base64]";
-	
-	return;
+	Write-Verbose "COMMAND - BASE64: [$EncodedCommand]";
 	
 	# TODO: verbose logging for ... troubleshooting etc. 
 	# 		including ... PRINTING the $Command FIRST. (before it's base-64 encoded)
@@ -268,12 +268,8 @@ filter New-JobForEphemeralDisksAutoStart {
 filter Get-ExistingSqlServerInstanceNames {
 	
 	# TESTING HACK: 
-	if ("WIN-EHJTPLI2M43" -eq [System.Net.Dns]::GetHostName()) {
+	if ([System.Net.Dns]::GetHostName() -in ("WIN-EHJTPLI2M43", "WORKSTATION")) {
 		return @("MSSQLSERVER");
-	}
-	
-	if ("WORKSTATION" -eq [System.Net.Dns]::GetHostName()) {
-		return @("MSSQLSERVER", "X3", "DEV");
 	}
 	
 	[string[]]$output = @();
@@ -304,7 +300,8 @@ filter Get-SqlVolumesByInstance {
 		$InstanceName
 	);
 	
-	if ("WORKSTATION" -eq [System.Net.Dns]::GetHostName()) {
+	# TESTING HACK:
+	if ([System.Net.Dns]::GetHostName() -in ("WIN-EHJTPLI2M43", "WORKSTATION")) {
 		return @("T", "V");
 	}
 	
@@ -369,4 +366,4 @@ filter Request-ValueWithDefault {
 # ==================================================================================================================================
 # EXPORT:
 # ==================================================================================================================================	
-Export-ModuleMember -Function Confirm-EphemeralDisksAutoStartDetails, Register-EphemeralDisksAutoStartJob, Set-EphemeralDisksForSqlServer;
+Export-ModuleMember -Function Confirm-EphemeralDisksAutoStartDetails, Register-EphemeralDisksAutoStartJob, Set-EphemeralDisksForSqlServer, UnRegister-EphemeralDisksAutoStartJob;
