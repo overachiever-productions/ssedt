@@ -9,28 +9,55 @@ function Enable-AutoStartForEphemeralDisks {
 	
 	begin {
 		[string]$invocationTemplate = Get-InvocationTemplateContent;
+		
 	};
 	
 	process {
+		Clear-Host;
+		
+		Write-Host "--------------------------------------------------------------------------------";
+		Write-Host "  STARTING SSEDT Auto-Start for Ephemeral Disks Configuration";
+		Write-Host "--------------------------------------------------------------------------------";
+		Write-Host "";
+		Write-Host "--STEP 1 of 3: Specify Target SQL Server Instance:";
+		
 		$instances = @(Get-ExistingSqlServerInstanceNames);
 		switch ($instances.Count) {
 			0 {
-				throw "SQL Server is NOT installed - can NOT proceed with auto-provisioning setup.";
+				Write-Host "";
+				Write-Host "";
+				
+				throw "SQL Server is NOT installed. Can NOT proceed with auto-provisioning setup.`n`n";
 				exit;
 			}
 			1 {
-				$SQL_INSTANCE = Request-ValueWithDefault -Message "Press Enter to Confirm [{0}] as Target SQL Server Instance." -Default ($instances[0]);
+				$SQL_INSTANCE = $instances[0];
+				
+				Write-Host "`t> SINGLE SQL SERVER INSTANCE Detected: $SQL_INSTANCE. Using [$SQL_INSTANCE] as Target.";
+				s
 			}
 			default {
-				Write-Host "Multiple SQL Server Instances Found: ";
-				foreach ($i in $instances) {
-					Write-Host "`t$i";
+				Write-Host "`tMultiple SQL Server Instances Found: `n";
+				[int]$key = 1;
+				[hashtable]$options = @{};
+				foreach ($instance in $instances) {
+					Write-Host "`t`t`t$key - $instance";
+					$options.Add($key, $instance);
+					$key++;
 				}
+				Write-Host "";
 				
-				$SQL_INSTANCE = Request-Value -Message "Please Specify which SQL Server Instance to Auto-Provision Disks for: ";
+				[int]$choice = Request-Value -Message "`tPlease Specify the # for which SQL Server Instance to Target ";
+				$SQL_INSTANCE = $options[$choice];
+				
+				if ([string]::IsNullOrWhiteSpace($SQL_INSTANCE)) {
+					throw "Invalid Instance Specified. Please Specify the number to the LEFT of the Instance-Name to proceed.";
+					exit;
+				}
 			}
 		}
 		
+		Write-Host "--STEP 2 of 3: Specify Target Disks:";
 		
 		# 	1)	SQL Server Instance Name
 		# 			ONLY bother ASKING for a name IF > 1 instance detected. Otherwise, just let users know what instance we're targeting
@@ -139,6 +166,15 @@ filter New-JobForEphemeralDisksAutoStart {
 }
 
 filter Get-ExistingSqlServerInstanceNames {
+	
+	# TESTING HACK: 
+	if ("WIN-EHJTPLI2M43" -eq [System.Net.Dns]::GetHostName()) {
+		return @("MSSQLSERVER");
+	}
+	
+	if ("WORKSTATION" -eq [System.Net.Dns]::GetHostName()) {
+		return @("MSSQLSERVER", "X3", "DEV");
+	}
 	
 	[string[]]$output = @();
 	
