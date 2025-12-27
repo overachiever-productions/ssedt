@@ -12,8 +12,26 @@ function Enable-AutoStartForEphemeralDisks {
 	};
 	
 	process {
+		$instances = @(Get-ExistingSqlServerInstanceNames);
+		switch ($instances.Count) {
+			0 {
+				throw "SQL Server is NOT installed - can NOT proceed with auto-provisioning setup.";
+				exit;
+			}
+			1 {
+				$SQL_INSTANCE = Request-ValueWithDefault -Message "Press Enter to Confirm [{0}] as Target SQL Server Instance." -Default ($instances[0]);
+			}
+			default {
+				Write-Host "Multiple SQL Server Instances Found: ";
+				foreach ($i in $instances) {
+					Write-Host "`t$i";
+				}
+				
+				$SQL_INSTANCE = Request-Value -Message "Please Specify which SQL Server Instance to Auto-Provision Disks for: ";
+			}
+		}
 		
-		# get user inputs for: 
+		
 		# 	1)	SQL Server Instance Name
 		# 			ONLY bother ASKING for a name IF > 1 instance detected. Otherwise, just let users know what instance we're targeting
 		
@@ -119,6 +137,43 @@ filter New-JobForEphemeralDisksAutoStart {
 		throw "Ruh roh. failed to create task.";
 	}
 }
+
+filter Get-ExistingSqlServerInstanceNames {
+	
+	[string[]]$output = @();
+	
+	$key = Get-Item 'HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server' -ErrorAction SilentlyContinue;
+	if (($key -eq $null) -or ([string]::IsNullOrEmpty($key.Property))) {
+		return $output;
+	}
+	
+	[string[]]$output = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server').InstalledInstances;
+	return $output;
+}
+
+filter Request-Value {
+	param (
+		[string]$Message
+	);
+	
+	$output = Read-Host $Message;
+	
+	return $output;
+}
+
+filter Request-ValueWithDefault {
+	param (
+		[string]$Message,
+		[string]$Default
+	);
+	
+	if (-not ($output = Read-Host ($Message -f $Default))) {
+		$output = $Default
+	}
+	
+	return $output;
+}
+
 
 # ==================================================================================================================================
 # EXPORT:
