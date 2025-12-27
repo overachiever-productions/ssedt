@@ -1,7 +1,7 @@
 ﻿# ==================================================================================================================================
 # PUBLIC:
 # ==================================================================================================================================	
-function Enable-AutoStartForEphemeralDisks {
+function Confirm-EphemeralDisksAutoStartDetails {
 	[CmdletBinding()]
 	param (
 		
@@ -11,7 +11,12 @@ function Enable-AutoStartForEphemeralDisks {
 		
 		# TODO: https://overachieverllc.atlassian.net/browse/SSEDT-13
 		
-		[string]$invocationTemplate = Get-InvocationTemplateContent;
+		# TODO:
+		# 		Need to confirm the following: 
+		# 		- User has elevation enough to create a job that will run as SYSTEM. 
+		# 		- SSEDT module is installed to a location where ... SYSTEM can get to it.
+		# 		AND... the FACADE needs to check this stuff - to help end-users (and not let them get going far enough to then throw an error)
+		# 		AND ... the non-facade ALSO needs to check this stuff as well. 
 	};
 	
 	process {
@@ -104,6 +109,14 @@ function Enable-AutoStartForEphemeralDisks {
 		Write-Host "`tPress CTRL+C to exit. ";
 		Write-Host "`tPress ENTER to continue - with values specified above. "
 		
+		# TEMP write-out
+		Clear-Host;
+		
+		Write-Host "PARAMETERS TO PASS IN TO JOB-CREATION/ENABLING-THINGY:"
+		Write-Host "`tINSTANCE: [$SQL_INSTANCE]";
+		Write-Host "`tVOLUMES:  [$disks]";
+		Write-Host "`tDIRNAMES: [$dirName]";
+		
 	};
 	
 	end {
@@ -111,7 +124,44 @@ function Enable-AutoStartForEphemeralDisks {
 	};
 }
 
-function Set-EphemeralDisks {
+function Register-EphemeralDisksAutoStartJob {
+	param (
+		[Alias('TempDbVolumes')]
+		[Parameter(Mandatory)]
+		[string[]]$Volumes,
+		[Alias('SqlInstanceName', 'InstanceName')]
+		[string]$Instance = "MSSQLSERVER",
+		[Alias('TempDbDirectoryNameDirectoryName')]
+		[string]$DirectoryName = "sqltemp"
+	);
+	
+	# this is the DIRECT task that create the job.... 
+	# 	requires all params passed in. translates them to base64... 	
+	
+	begin {
+		
+		# TODO:
+		# 		Need to confirm the following: 
+		# 		- User has elevation enough to create a job that will run as SYSTEM. 
+		# 		- SSEDT module is installed to a location where ... SYSTEM can get to it.
+		# 		AND... the FACADE needs to check this stuff - to help end-users (and not let them get going far enough to then throw an error)
+		# 		AND ... the non-facade ALSO needs to check this stuff as well. 			
+		
+		
+		[string]$invocationTemplate = Get-InvocationTemplateContent;
+		
+	};
+	
+	process {
+		
+	};
+	
+	end {
+		
+	};
+}
+
+function Set-EphemeralDisksForSqlServer {
 	[CmdletBinding()]
 	param (
 		[Alias('TempDbVolumes')]
@@ -307,4 +357,4 @@ filter Request-ValueWithDefault {
 # ==================================================================================================================================
 # EXPORT:
 # ==================================================================================================================================	
-Export-ModuleMember -Function Enable-AutoStartForEphemeralDisks, Set-EphemeralDisks;
+Export-ModuleMember -Function Confirm-EphemeralDisksAutoStartDetails, Register-EphemeralDisksAutoStartJob, Set-EphemeralDisksForSqlServer;
