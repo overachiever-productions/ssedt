@@ -1,6 +1,6 @@
 ﻿@{
 	RootModule = 'ssedt.psm1'
-	ModuleVersion = '0.2.0.0'
+	ModuleVersion = '0.4.3.0'
 	GUID = '2f23447d-6e69-4e1c-9dd4-c87f1672e341'
 	Author = 'Michael K. Campbell'
 	CompanyName = 'OverAchiever Productions, LLC.'
@@ -9,21 +9,10 @@
 	PowerShellVersion = '5.1'
 	DotNetFrameworkVersion = '4.5.2'
 	ProcessorArchitecture = 'None'
-#	RequiredModules = @()
-#	RequiredAssemblies = @()
-#	ScriptsToProcess = @()
 	TypesToProcess = @()
 	FormatsToProcess = @()
-#	NestedModules = @()
-	FunctionsToExport = @(
-		'Enable-AutoStartForEphemeralDisks',
-		'Set-EphemeralDisks'
-	)
-#	CmdletsToExport = '*' 
-#	VariablesToExport = '*'
+	FunctionsToExport = '*'
 	AliasesToExport = '*'
-#	ModuleList = @()
-#	FileList = @()
 	PrivateData = @{
 		PSData = @{
 			# Tags = @()
