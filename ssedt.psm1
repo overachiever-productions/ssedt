@@ -126,17 +126,16 @@ function Confirm-EphemeralDisksAutoStartDetails {
 
 function Register-EphemeralDisksAutoStartJob {
 	param (
+		[Alias('SqlInstanceName', 'InstanceName')]
+		[string]$Instance = "MSSQLSERVER",
+		
 		[Alias('TempDbVolumes')]
 		[Parameter(Mandatory)]
 		[string[]]$Volumes,
-		[Alias('SqlInstanceName', 'InstanceName')]
-		[string]$Instance = "MSSQLSERVER",
+
 		[Alias('TempDbDirectoryNameDirectoryName')]
 		[string]$DirectoryName = "sqltemp"
 	);
-	
-	# this is the DIRECT task that create the job.... 
-	# 	requires all params passed in. translates them to base64... 	
 	
 	begin {
 		
@@ -146,14 +145,18 @@ function Register-EphemeralDisksAutoStartJob {
 		# 		- SSEDT module is installed to a location where ... SYSTEM can get to it.
 		# 		AND... the FACADE needs to check this stuff - to help end-users (and not let them get going far enough to then throw an error)
 		# 		AND ... the non-facade ALSO needs to check this stuff as well. 			
-		
-		
-		[string]$invocationTemplate = Get-InvocationTemplateContent;
-		
 	};
 	
 	process {
 		
+		[string]$serializedVolumes = $Volumes -join ",";
+		
+		[string]$command = Get-InvocationTemplateContent;
+		$command = $command.Replace("MSSQLSERVER", $Instance);
+		$command = $command.Replace("@()", "@($serializedVolumes)");
+		$command = $command.Replace("sqltemp", "$DirectoryName");
+		
+		New-JobForEphemeralDisksAutoStart -Command $command;
 	};
 	
 	end {
@@ -219,11 +222,20 @@ Set-EphemeralDisks -Volumes @() -Instance "MSSQLSERVER" -DirectoryName "sqltemp"
 
 filter New-JobForEphemeralDisksAutoStart {
 	param (
-		[Parameter(Mandatory)]
 		[string]$TaskName = "Provision Ephemeral Disks at Startup",
 		[Parameter(Mandatory)]
 		[string]$Command
 	);
+	
+	
+	Write-Verbose "COMMAND: [$Command]";
+	
+	$bytes = [System.Text.Encoding]::Unicode.GetBytes($Command);
+	[string]$base64 = [Convert]::ToBase64String($bytes);
+	
+	Write-Verbose "COMMAND - BASE64: [$base64]";
+	
+	return;
 	
 	# TODO: verbose logging for ... troubleshooting etc. 
 	# 		including ... PRINTING the $Command FIRST. (before it's base-64 encoded)
@@ -249,8 +261,11 @@ filter New-JobForEphemeralDisksAutoStart {
 		Register-ScheduledTask -TaskName $TaskName -Trigger $trigger -Action $action -Settings $settings -User "SYSTEM" -RunLevel Highest -Description $description | Out-Null;
 	}
 	catch {
+		# TODO:
 		throw "Ruh roh. failed to create task.";
 	}
+	
+	# TODO: report on outcome... 
 }
 
 filter Get-ExistingSqlServerInstanceNames {
