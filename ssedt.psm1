@@ -149,7 +149,7 @@ function Register-EphemeralDisksAutoStartJob {
 	
 	process {
 		
-		[string]$serializedVolumes = $Volumes -join ",";
+		[string]$serializedVolumes = ($Volumes | ForEach-Object { "'$_'" }) -join ",";
 		
 		[string]$command = @"
 Import-Module -Name ssedt;
