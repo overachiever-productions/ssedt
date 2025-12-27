@@ -212,10 +212,7 @@ function Set-EphemeralDisksForSqlServer {
 # ==================================================================================================================================	
 filter Get-InvocationTemplateContent {
 	return @"
-Set-StrictMode -Version 3.0;
-#Requires -RunAsAdministrator; 
 Import-Module -Name ssedt;
-
 Set-EphemeralDisks -Volumes @() -Instance "MSSQLSERVER" -DirectoryName "sqltemp";
 "@
 }
