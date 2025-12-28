@@ -3,23 +3,26 @@
 # ==================================================================================================================================	
 function Confirm-EphemeralDisksAutoStartDetails {
 	[CmdletBinding()]
-	param (
-		
-	);
+	param ();
 	
-	begin {
+	begin {};
+	
+	process {
 		
 		# TODO: https://overachieverllc.atlassian.net/browse/SSEDT-13
 		
-		# TODO:
-		# 		Need to confirm the following: 
-		# 		- User has elevation enough to create a job that will run as SYSTEM. 
-		# 		- SSEDT module is installed to a location where ... SYSTEM can get to it.
-		# 		AND... the FACADE needs to check this stuff - to help end-users (and not let them get going far enough to then throw an error)
-		# 		AND ... the non-facade ALSO needs to check this stuff as well. 
-	};
-	
-	process {
+		$currentVersion = $MyInvocation.MyCommand.Module.Version;
+		$location = $MyInvocation.MyCommand.Module.Path;
+		
+		Write-Host "CurrentVersion: $currentVersion";
+		Write-Host "Path: $location";
+		
+		## yeah... this works. It removes any path with the current user's name in it... 
+		# 		e.g., anything for adminstrator, "mikeC", or whatever will be stripped out. 
+		[string[]]$modulePaths = $Env:PSModulePath.Split(';') | Where-Object { $_ -notlike "*$($env:USERNAME)*" };
+		
+		return;
+		
 		Clear-Host;
 		Write-Host "--------------------------------------------------------------------------------";
 		Write-Host "  ENABLING SSEDT Auto-Start for Ephemeral Disks Configuration";
@@ -104,9 +107,7 @@ function Confirm-EphemeralDisksAutoStartDetails {
 		Register-EphemeralDisksAutoStartJob -Instance $SQL_INSTANCE -Volumes $directories -DirectoryName $DIR_NAME;
 	};
 	
-	end {
-		
-	};
+	end {};
 }
 
 function Register-EphemeralDisksAutoStartJob {
