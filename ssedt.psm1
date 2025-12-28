@@ -362,19 +362,6 @@ filter Request-Value {
 	return $output;
 }
 
-filter Request-ValueWithDefault {
-	param (
-		[string]$Message,
-		[string]$Default
-	);
-	
-	if (-not ($output = Read-Host ($Message -f $Default))) {
-		$output = $Default
-	}
-	
-	return $output;
-}
-
 # ==================================================================================================================================
 # EXPORT:
 # ==================================================================================================================================	
