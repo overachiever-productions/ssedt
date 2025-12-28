@@ -196,10 +196,23 @@ function Set-EphemeralDisksForSqlServer {
 }
 
 function UnRegister-EphemeralDisksAutoStartJob {
-	throw "Not Yet Implemented.";
-	# https://overachieverllc.atlassian.net/browse/SSEDT-15
+	# TODO: I'll eventually need the $InstanceName as part of the JOB/TASK-NAME - as per: https://overachieverllc.atlassian.net/browse/SSEDT-14
+	param (
+		[string]$TaskName = "Provision Ephemeral Disks at Startup"
+	);
 	
-	# TODO: hmmm. This'll need an instance name (eventually).
+	try {
+		$task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue;
+		if ($null -ne $task) {
+			Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false | Out-Null;
+		}
+	}
+	catch {
+		throw "Exception During Removal of Job: [$TaskName]: $_";
+		return;
+	}
+	
+	Write-Host "Windows Scheduled Task: [$TaskName] removed.";
 }
 
 # ==================================================================================================================================
@@ -358,19 +371,6 @@ filter Request-Value {
 	);
 	
 	$output = Read-Host $Message;
-	
-	return $output;
-}
-
-filter Request-ValueWithDefault {
-	param (
-		[string]$Message,
-		[string]$Default
-	);
-	
-	if (-not ($output = Read-Host ($Message -f $Default))) {
-		$output = $Default
-	}
 	
 	return $output;
 }
