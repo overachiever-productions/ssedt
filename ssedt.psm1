@@ -20,21 +20,21 @@ function Confirm-EphemeralDisksAutoStartDetails {
 	};
 	
 	process {
+		Clear-Host;
+		Write-Host "--------------------------------------------------------------------------------";
+		Write-Host "  ENABLING SSEDT Auto-Start for Ephemeral Disks Configuration";
+		Write-Host "--------------------------------------------------------------------------------";
 		Write-StepHeader -StepText "STEP 1 of 4: Specify Target SQL Server Instance:";
 		
 		$instances = @(Get-ExistingSqlServerInstanceNames);
 		switch ($instances.Count) {
 			0 {
-				Write-Host "`n";
-				Write-Host "`n";
 				throw "SQL Server is NOT installed. Can NOT proceed with auto-provisioning setup.";
 				exit;
 			}
 			1 {
 				$SQL_INSTANCE = $instances[0];
-				
 				Write-Host "`t> SINGLE SQL SERVER INSTANCE Detected: $SQL_INSTANCE. Using [$SQL_INSTANCE] as Target.";
-				
 			}
 			default {
 				Write-Host "`tMultiple SQL Server Instances Found: `n";
@@ -45,78 +45,63 @@ function Confirm-EphemeralDisksAutoStartDetails {
 					$options.Add($key, $instance);
 					$key++;
 				}
-				Write-Host "`n";
 				
 				[int]$choice = Request-Value -Message "`tPlease Specify the # for which SQL Server Instance to Target ";
 				$SQL_INSTANCE = $options[$choice];
 				
 				if ([string]::IsNullOrWhiteSpace($SQL_INSTANCE)) {
-					Write-Host "`n";
-					Write-Host "`n";
-					
 					throw "Invalid Instance Specified. Please Specify the number to the LEFT of the Instance-Name to proceed.`n`n";
-					exit;
+					return;
 				}
 				
 				Write-Host "`t> Using [$SQL_INSTANCE] as Target.";
 			}
 		}
 		
-		Write-StepHeader -StepText "STEP 2 of 4: Confirm Target Disks:";
+		Write-StepHeader -StepText "STEP 2 of 4: Confirm Target Volumes:";
 		$currentTempdbDiskVolumes = Get-SqlVolumesByInstance -InstanceName $SQL_INSTANCE;
+		[string]$SERIALIZED_DISKS = $currentTempdbDiskVolumes -join ",";
+		Write-Host "`t> Volumes in use by [tempdb] on Instance [$SQL_INSTANCE] are: [$SERIALIZED_DISKS]";
 		
-		Write-Host "`tCurrent Volumes Used by [tempdb] on $($SQL_INSTANCE): `n";
-		
-		[string]$serializedString = "";
-		foreach ($volume in $currentTempdbDiskVolumes) {
-			Write-Host "`t`t`t$($volume)";
-			$serializedString += "$($volume),";
-		}
-		
-		$serializedString = $serializedString.Substring(0, $serializedString.Length - 1);
-		
-		Write-Host "`n";
-#		Write-Host "`tOPTIONS:"
-#		Write-Host "`t`tPress ENTER to accept currently configured disks: [$serializedString]";
-#		Write-Host "`t`tYou may ALSO explicitly specify a comma-delimited string of disks to use.";
-#		Write-Host "`t`t`tWARNING: If you use any option OTHER than what is currently configured, you will need to..."
-#		Write-Host "`t`t`t... modify the [tempdb] on [$SQL_INSTANCE] to ONLY use the disks specified.";
-		
-		[string]$disks = Read-Host;
-		
-		if ([string]::IsNullOrWhiteSpace($disks)){
-			$disks = $serializedString;
-		}
-		
-		
-# !!!! TODO: https://overachieverllc.atlassian.net/browse/SSEDT-11		
 		Write-StepHeader -StepText "STEP 3 of 4: Specify TempDb Directory Name (per volume):";
-		
-		$dirName = Request-ValueWithDefault -Message "Specify a value for tempdb dir: " -Default "SqlTempDbData";
+		$directories = @(Get-TempdbDirectoryNames);
+		switch ($directories.Count) {
+			0 {
+				throw "Could not extract directory from [master].[sys].[master_files] for [tempdb] on SQL Instance: [$SQL_INSTANCE]. Terminating.";
+				return;
+			}
+			1 {
+				[string]$DIR_NAME = $directories[0];
+				Write-Host "`t > Directory-Name for [tempdb] files on [$SQL_INSTANCE] is: [$DIR_NAME].";
+			}
+			default {
+				throw "Configuration problem with [tempdb] on SQL Server Instance [$SQL_INSTANCE]: there are MULTIPLE directories against different volumes specified for the path to [tempdb] files.";
+				Write-Host "`t`tQuery [master].[sys].[master_files] WHERE [database_id] = 2 for directory/path names. (ssedt requires a standardized (single) directory-name across all volumes.)";
+				return;
+			}
+		}
 		
 		# 	4) DISK types? 
 		# 		i.e., if we can detect that this is an EC2 instance, do we ask for NVMe vs EBS? 
 		# 			what about on other platforms? 
 		
-		
 		Write-StepHeader -StepText "STEP 4 of 4: Confirmation:";
+		Write-Host "`t> Current SQL Server [tempdb] Configuration Settings:";
+		Write-Host "`t`t-> SQL Server Instance: [$SQL_INSTANCE]";
+		Write-Host "`t`t-> Volumes to Provision at Startup: [$SERIALIZED_DISKS]";
+		Write-Host "`t`t-> DirectoryName for [tempdb] data files: [$DIR_NAME]";
 		
-		Write-Host "`tSpecified Configuration Options:";
-		Write-Host "`t`tTarget SQL Server Instance: [$SQL_INSTANCE]";
-		Write-Host "`t`tTarget Volumes to Provision During Startup: [$disks]";
-		Write-Host "`t`tDirectoryName for [tempdb] data files (per disk): [$dirName]";
+		Write-Host "`n`t!!Please Verify the above settings.!!";
+		Write-Host "";
+		[string]$choice = Request-Value -Message "`To Proceed type 'yes'. (To abort, press enter or any other key.)";
 		
-		Write-Host "`tPress CTRL+C to exit. ";
-		Write-Host "`tPress ENTER to continue - with values specified above. "
+		if ("yes" -ne $choice) {
+			Write-Host "`t> Supplied Input: [$choice].";
+			Write-Host "`t> Terminating...";
+			return;
+		}
 		
-		# TEMP write-out
-		Clear-Host;
-		
-		Write-Host "PARAMETERS TO PASS IN TO JOB-CREATION/ENABLING-THINGY:"
-		Write-Host "`tINSTANCE: [$SQL_INSTANCE]";
-		Write-Host "`tVOLUMES:  [$disks]";
-		Write-Host "`tDIRNAMES: [$dirName]";
-		
+		Register-EphemeralDisksAutoStartJob -Instance $SQL_INSTANCE -Volumes $directories -DirectoryName $DIR_NAME;
 	};
 	
 	end {
@@ -308,23 +293,54 @@ filter Get-SqlVolumesByInstance {
 	try {
 		$command = "& SQLCMD -S $(Get-ConnectionInstance -InstanceName $InstanceName) -Q `"SET NOCOUNT ON; SELECT DISTINCT(LEFT([physical_name], 1)) [volume] FROM master.sys.master_files WHERE database_id = 2; `";";
 		
-		$results = Invoke-Expression $command;
-		
-		[int]$lineNumber = 0;
-		[string[]]$output = @();
-		foreach ($disk in ($results -split "`n")) {
-			if ($lineNumber -ge 2) {
-				$output += $disk;
-			}
-			
-			$lineNumber++;
-		}
-		
-		return $output;
+		$results = Get-SimpleSqlResults -Command;
+		return $results;
 	}
 	catch {
 		throw;
 	}
+}
+
+filter Get-TempdbDirectoryNames {
+	param (
+		$InstanceName
+	);
+	
+	# TESTING HACK:
+	if ([System.Net.Dns]::GetHostName() -in ("WIN-EHJTPLI2M43", "WORKSTATION")) {
+		return @("SQLData");
+	}
+	
+	try {
+		$command = "& SQLCMD -S $(Get-ConnectionInstance -InstanceName $InstanceName) -Q `"SELECT DISTINCT SUBSTRING([physical_name], 0, LEN([physical_name]) - CHARINDEX(N'\', REVERSE([physical_name])) + 1) [path] FROM sys.master_files WHERE [database_id] = 2; `";";
+		
+		$results = Get-SimpleSqlResults -Command;
+		return $results;
+	}
+	catch {
+		# TODO: 
+		throw "ruh roh!";
+	}
+}
+
+filter Get-SimpleSqlResults {
+	param (
+		[string]$Command
+	);
+	
+	$results = Invoke-Expression $Command;
+	
+	[int]$lineNumber = 0;
+	[string[]]$output = @();
+	foreach ($disk in ($results -split "`n")) {
+		if ($lineNumber -ge 2) {
+			$output += $disk.Trim();
+		}
+		
+		$lineNumber++;
+	}
+	
+	return $output;
 }
 
 filter Write-StepHeader {
@@ -332,12 +348,8 @@ filter Write-StepHeader {
 		[string]$StepText
 	);
 	
-	Clear-Host;
-	Write-Host "--------------------------------------------------------------------------------";
-	Write-Host "  ENABLING SSEDT Auto-Start for Ephemeral Disks Configuration";
-	Write-Host "--------------------------------------------------------------------------------";
 	Write-Host "";
-	Write-Host "-- $StepText";
+	Write-Host "  $StepText";
 }
 
 filter Request-Value {
