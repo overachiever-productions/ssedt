@@ -17,8 +17,6 @@ function Confirm-EphemeralDisksAutoStartDetails {
 		Write-Host "CurrentVersion: $currentVersion";
 		Write-Host "Path: $location";
 		
-		## yeah... this works. It removes any path with the current user's name in it... 
-		# 		e.g., anything for adminstrator, "mikeC", or whatever will be stripped out. 
 		[string[]]$modulePaths = $Env:PSModulePath.Split(';') | Where-Object { $_ -notlike "*$($env:USERNAME)*" };
 		
 		return;
